@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Happy Birthday to You!!!</title>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            background-color: #3a373e;
+        }
+
+        canvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+
+        #birthday-message {
+            position: absolute;
+            top: 25%;
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: Arial, sans-serif;
+            font-size: 48px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 4px  rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="fireworksCanvas"></canvas>
+    <div id="birthday-message">Happy Birthday to You!!!</div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get the canvas element
+            const canvas = document.getElementById('fireworksCanvas');
+            const ctx = canvas.getContext('2d');
+
+            // Set canvas dimensions to match the window size
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            // Initialize fireworks array
+            let fireworks = [];
+            let rays = [];
+            const particles = [];
+
+            // Function to create a firework
+            function createFirework() {
+                const speed = Math.random() * 2 + 1; // Random speed between 1 and 3
+
+                const firework = {
+                    x: Math.random() * canvas.width,
+                    y: canvas.height,
+                    targetX: Math.random() * canvas.width,
+                    targetY: Math.random() * canvas.height,
+                    speed: speed,
+                    size: Math.random() * 3 + 1,
+                    color: getRandomColor(),
+                    exploded: false,
+                    reachedMessage: false,
+                    explosionTimer: Math.random() * 1700 + 1500, // Random timer between 1500 and 3200 ms
+                    reduceSpeedTimer: 0, // Timer for reducing speed
+                    rays: [],
+                    trail: {
+                        length: 0, // Initial trail length set to 0
+                        alpha: 0.2
+                    }
+                };
+
+                firework.trail.length = firework.size * 10 + 50; // Calculate trail length based on size
+
+                fireworks.push(firework);
+            }
+
+            // Generate a random color
+            function getRandomColor() {
+                const letters = '0123456789ABCDEF';
+                let color = '#';
+                for (let i = 0; i < 6; i++) {
+                    color += letters[Math.floor(Math.random() * 16)];
+                }
+                return color;
+            }
+
+            // Update and draw the fireworks
+            function updateFireworks() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    fireworks.forEach((firework, index) => {
+        if (!firework.exploded) {
+            firework.y -= firework.speed;
+
+            const dx = firework.targetX - firework.x;
+            const dy = firework.targetY - firework.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < 2) {
+                firework.exploded = true;
+                explodeFirework(firework.x, firework.y, firework.size, firework.color);
+            }
+
+            ctx.beginPath();
+            ctx.fillStyle = firework.color;
+            ctx.arc(firework.x, firework.y, firework.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw trail
+            ctx.save();
+            ctx.strokeStyle = firework.color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([2, 2]);
+            ctx.globalAlpha = firework.trail.alpha;
+            ctx.beginPath();
+            ctx.moveTo(firework.x, firework.y + firework.size);
+            ctx.lineTo(firework.x, firework.y + firework.size + firework.trail.length);
+            ctx.stroke();
+            ctx.restore();
+
+            // Check if reduce speed timer should be started
+            if (firework.reduceSpeedTimer === 0 && firework.y <= canvas.height / 2) {
+                firework.reduceSpeedTimer = setTimeout(function() {
+                    firework.speed = 0; // Reduce speed to 0
+                    clearTimeout(firework.reduceSpeedTimer);
+                    firework.reduceSpeedTimer = 0;
+                    setTimeout(function() {
+                        explodeFirework(firework.x, firework.y, firework.size, firework.color);
+                        firework.exploded = true;
+                    }, 100); // Trigger explosion after 10 ms
+                }, Math.random() * 1700 + 1500); // Random timer between 1500 and 3200 ms
+            }
+        }
+
+        firework.ticker++;
+    });
+
+    fireworks = fireworks.filter(firework => !firework.exploded);
+
+    requestAnimationFrame(updateFireworks);
+}
+
+
+            // Explode the firework
+            function explodeFirework(x, y, size, color) {
+    const numParticles = 100;
+    for (let i = 0; i < numParticles; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 4 + 1;
+        const particle = {
+            x,
+            y,
+            size: Math.random() * 3 + 1,
+            color,
+            velocityX: Math.cos(angle) * speed,
+            velocityY: Math.sin(angle) * speed,
+            gravity: 0.1,
+            alpha: 1
+        };
+        particles.push(particle);
+    }
+
+    const numRays = 50;
+    const angleIncrement = (Math.PI * 2) / numRays;
+
+    for (let i = 0; i < numRays; i++) {
+        const angle = i * angleIncrement;
+        const ray = {
+            x,
+            y,
+            angle,
+            length: Math.random() * 150 + 100,
+            color,
+            life: 200
+        };
+        rays.push(ray);
+    }
+
+    animateRays();
+}
+
+            // Animate rays
+            function animateRays() {
+                rays.forEach((ray, index) => {
+                    if (ray.life > 0) {
+                        const endPointX = ray.x + Math.cos(ray.angle) * ray.length;
+                        const endPointY = ray.y + Math.sin(ray.angle) * ray.length;
+
+                        ctx.strokeStyle = ray.color;
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.moveTo(ray.x, ray.y);
+                        ctx.lineTo(endPointX, endPointY);
+                        ctx.stroke();
+
+                        ray.length -= 0.5;
+                        ray.life--;
+                    }
+                });
+
+                rays = rays.filter(ray => ray.life > 0);
+
+                if (rays.length > 0) {
+                    requestAnimationFrame(animateRays);
+                }
+            }
+
+            // Launch fireworks at an interval
+            function launchFireworks() {
+                setInterval(createFirework, 50); // Launch fireworks every 50 ms
+            }
+
+            // Start the animation
+            launchFireworks();
+            updateFireworks();
+        });
+    </script>
+</body>
+</html>
